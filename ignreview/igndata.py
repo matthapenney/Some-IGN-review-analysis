@@ -11,7 +11,7 @@ sns.set_context("notebook")
 import matplotlib.pyplot as plt
 #plt.style.use('ggplot')
 
-df= pd.read_csv("~/Projects/ignreview/ign.csv")
+df= pd.read_csv("~/Projects/Some-IGN-review-analysis/ignreview/ign.csv")
 print(df.dtypes)
 df.head()
 df.score < 5 	#outputs false and trues for each
