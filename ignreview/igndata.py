@@ -5,7 +5,9 @@ import matplotlib.pyplot as plt
 from matplotlib.pyplot import pie, axis
 import sys #check Python vers num
 
-import scipy as spy
+from scipy import stats
+import statsmodels.api as sm
+
 import seaborn as sns
 sns.set_style("whitegrid")
 sns.set_context("notebook")
@@ -19,12 +21,12 @@ print('Matplotlib version: '+ matplotlib.__version__)
 
 df= pd.read_csv("~/Projects/Some-IGN-review-analysis/ignreview/ign.csv")
 df.dtypes
-df.head()
-df.tail()
+print(df.head())
+print(df.tail())
+
 
 #Analyze---------------------
 #sort dataframe and select top row
-#use max() attribute to find maximum value
 
 sorted = df.sort_values(['release_year'], ascending = True)
 print(sorted.head(1))
@@ -35,28 +37,30 @@ df['release_year'].min()
 #Only 1 game released in 1970, outlier
 df = df[df.release_year > 1970]
 
-#df.score < 5 	#outputs false and trues for each
-						#This series is called a mask
-						#Count number of trues and divide by total, get fraction of ratings <5
-#np.sum(df.score < 5)
-#np.sum(df.score < 5)/float(df.shape[0] )	#cant do in python 2.x because division is integer divison by default - must convert to float
-#np.mean(df.score < 5)	#exact same as (np.sum(df.score < 5)/float(df.shape[0] ))
-#(df.score < 5).mean()	#exact same just in Pandas
+df.score < 5 	#outputs false and trues for each
+#This series is called a mask
+#Count number of trues and divide by total, get fraction of ratings <5
 
-#filtering dataframe
-#(df.query("score > 5.0"))
-#(df[df.release_year < 2012])		#create mask and use to 'index' into dataframe to get rows we want
-#(df[(df.release_year < 2012) & (df.score > 5.0)]) #combine these 2 conditions, uses boolean AND
+np.sum(df.score < 5)
+np.sum(df.score < 5)/float(df.shape[0] )	#cant do in python 2.x because division is integer divison by default - must convert to float
+np.mean(df.score < 5)	#exact same as (np.sum(df.score < 5)/float(df.shape[0] ))
+(df.score < 5).mean()	#exact same just in Pandas
+
+#filtering dataframe	
+#create mask and use to 'index' into dataframe to get rows we want
+post_2012 = (df[(df.release_year < 2012) & (df.score > 5.0)]) #combine these 2 conditions, uses boolean AND
+
+print(post_2012.head())
 
 #filter dataframe by year
-'''
+"""
 checker = np.logical_and((df.release_year > 1999), (df.score > 5.0))
 checker2 = np.logical_and((df.release_year > 2016), (df.score > 5.0))
 
-for ry in df.release_year:
+for year in df.release_year:
 	if checker:
 		df[(df.release_year == 2000) & (df.score > 5.0)]
-		ry = ry + 1
+		year = year + 1
 	elif checker2:
 		break
 
@@ -77,8 +81,7 @@ df[(df.release_year == 2013) & (df.score >5.0)]	#year 2013
 df[(df.release_year == 2014) & (df.score >5.0)]	#year 2014
 df[(df.release_year == 2015) & (df.score >5.0)]	#year 2015
 df[(df.release_year == 2016) & (df.score >5.0)]	#year 2016
-'''
-print(df.head())
+"""
 
 ##CLEANING
 df['editors_choice'] = df.editors_choice.astype(bool)
@@ -102,9 +105,11 @@ plt.xlabel('Average Score of Game')
 plt.ylabel('Counts')
 plt.title('Game Score Histogram')
 plt.legend()
-					#low review numbers are very sparse in comparison to closer to average
-					#Might have to regularize  model for recommendation
-#setting the alpha transparency low we can show how density of highly rated games has changed over time
+
+
+#low review numbers are very sparse in comparison to closer to average
+#Might have to regularize  model for recommendation
+#setting the alpha transparency low = we can show how density of highly rated games has changed over time
 
 with sns.axes_style('darkgrid'):
 	fig, (ax1, ax2) = plt.subplots(2, sharex = True, sharey = True)
@@ -178,6 +183,7 @@ genre_counts = []
 for score in list_genre:
     genre_counts.append(genre_count[score])
 
+
 counts = []   
 for score in ordered_score:
 	counts.append(score_count[score])
@@ -218,7 +224,7 @@ year2014 = df[df.release_year == 2014]
 
 pop1 = year2001.platform.value_counts()[year2001.platform.value_counts() > 3]
 pop1.plot.pie(ax = ax[0,0])
-ax[0,0].set_title('2001')
+ax[0,0].set_title('2001 (Xbox/gamecube released)')
 ax[0,0].set_ylabel('')
 
 pop2 = year2002.platform.value_counts()[year2002.platform.value_counts() > 3]
@@ -228,17 +234,17 @@ ax[0,1].set_ylabel('')
 
 pop3 = year2005.platform.value_counts()[year2005.platform.value_counts() > 3]
 pop3.plot.pie(ax = ax[0,2])
-ax[0,2].set_title('2005')
+ax[0,2].set_title('2005 (Xbox360 released')
 ax[0,2].set_ylabel('')
 
 pop4 = year2006.platform.value_counts()[year2006.platform.value_counts() > 3]
 pop4.plot.pie(ax = ax[1,0])
-ax[1,0].set_title('2006')
+ax[1,0].set_title('2006 (PS3/Wii Released')
 ax[1,0].set_ylabel('')
 
 pop5 = year2013.platform.value_counts()[year2013.platform.value_counts() > 3]
 pop5.plot.pie(ax = ax[1,1])
-ax[1,1].set_title('2013')
+ax[1,1].set_title('2013 (PS4/XBOne released)')
 ax[1,1].set_ylabel('')
 
 pop6 = year2014.platform.value_counts()[year2014.platform.value_counts() > 3]
@@ -247,6 +253,46 @@ ax[1,2].set_title('2014')
 ax[1,2].set_ylabel('')
 
 
+#Time Series Analysis
+#General Purpose Tool - Linear Regression
+#least squares fit, reurning model and results objects from 
+#Rating over time series release date? (release date = df['release'])
 
-plt.show()
+unicorn_x = df['release_month']
+unicorn_y = df['score']
+
+print("unicorn_x:", unicorn_x)
+print("unicorn_y:", unicorn_y)
+
+
+#slope, intercept, r_value, p_value, std_err = stats.linregress(unicorn1,unicorn2)
+
+#sm.add_constant(unicorn_x) adds a column of 1s to unicorn_x to get intercept term
+unicorn_x = sm.add_constant(unicorn_x)
+
+results = sm.OLS(unicorn_y, unicorn_x).fit()
+
+
+#Linear regression
+''''
+plt.scatter(unicorn_x,unicorn_y)
+x_plot = np.linspace(0,1,100)
+plt.plot(X_plot, X_plot*results.params[0] + results.params[1])
+plt.title("Linear Regressson (Score v. Release_month")
+'''
+#Moving Average - Time Series (release date ) vs. score
+
+dates = pd.date_range(df.index.min(), df.index.max())
+reindexed = df.reindex(dates)
+print(reindexed.head())
+roll_mean = pd.rolling_mean(reindexed.score, 30)
+
+ewma = pd.stats.moments.ewma
+ewma(reindexed.score, span = 30)
+
+plt.scatter(roll_mean.index, roll_mean)
+plt.title('Work in Progress')
+
+
+#plt.show()
 
