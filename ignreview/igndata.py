@@ -36,19 +36,14 @@ df['release_year'].min()
 
 #Only 1 game released in 1970, outlier
 df = df[df.release_year > 1970]
-
-df.score < 5 	#outputs false and trues for each
-#This series is called a mask
-#Count number of trues and divide by total, get fraction of ratings <5
-
+df.score > 5
 np.sum(df.score < 5)
-np.sum(df.score < 5)/float(df.shape[0] )	#cant do in python 2.x because division is integer divison by default - must convert to float
 np.mean(df.score < 5)	#exact same as (np.sum(df.score < 5)/float(df.shape[0] ))
 (df.score < 5).mean()	#exact same just in Pandas
 
 #filtering dataframe	
 #create mask and use to 'index' into dataframe to get rows we want
-post_2012 = (df[(df.release_year < 2012) & (df.score > 5.0)]) #combine these 2 conditions, uses boolean AND
+post_2012 = (df[(df.release_year > 2012) & (df.score > 5.0)]) #combine these 2 conditions, uses boolean AND
 
 print(post_2012.head())
 
@@ -91,7 +86,6 @@ _ = plt.legend()
 
 
 #low review numbers are very sparse in comparison to closer to average
-#Might have to regularize  model for recommendation
 #setting the alpha transparency low = we can show how density of highly rated games has changed over time
 
 with sns.axes_style('darkgrid'):
@@ -193,8 +187,6 @@ ticks = plt.setp(ax.get_xticklabels(), rotation = 30, fontsize = 8)
 print(df.platform.unique())
 print(df.platform.value_counts())
 
-#Pie graph platform breakdown
-#First top 10 popular platforms
 
 #Platforms by year
 f, ax = plt.subplots(2,3, figsize = (10,10))
